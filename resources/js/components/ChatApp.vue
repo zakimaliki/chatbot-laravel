@@ -11,7 +11,18 @@
     <div class="flex-1 max-w-4xl w-full mx-auto p-4">
       <!-- Chat messages will go here -->
       <div class="bg-white rounded-lg shadow-sm min-h-[400px] mb-4 p-4">
-        <!-- Messages will be displayed here -->
+        <div v-for="(message, index) in messages" :key="index" class="mb-2">
+          <div :class="message.role === 'user' ? 'text-right' : 'text-left'">
+            <span class="font-semibold"
+              >{{ message.role === "user" ? "Anda" : "AI" }}:</span
+            >
+            <span>{{ message.content }}</span>
+            <!-- Show loading indicator if AI is thinking -->
+            <span v-if="message.status === 'thinking'" class="text-gray-500"
+              >...loading</span
+            >
+          </div>
+        </div>
       </div>
 
       <!-- Input Area -->
@@ -39,7 +50,68 @@
 import { ref } from "vue";
 
 const input = ref("");
-const sendMessage = () => {
-  console.log("Mengirim:", input.value);
+const messages = ref([]);
+
+const sendMessage = async () => {
+  if (!input.value.trim()) return;
+
+  // Kirim pesan pengguna
+  const userMessage = {
+    role: "user",
+    content: input.value,
+    status: "complete",
+  };
+  messages.value.push(userMessage);
+
+  // Menambahkan placeholder AI
+  const aiMessage = { role: "assistant", content: "", status: "thinking" };
+  messages.value.push(aiMessage);
+
+  input.value = "";
+
+  try {
+    // Mengirim request ke API Laravel
+    const response = await fetch("/api/chat", {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json",
+      },
+      body: JSON.stringify({ message: userMessage.content }),
+    });
+
+    aiMessage.status = "generating";
+    const reader = response.body.getReader();
+    const decoder = new TextDecoder();
+
+    // Streaming data dari OpenAI
+    while (true) {
+      const { done, value } = await reader.read();
+      if (done) break;
+      aiMessage.content += decoder.decode(value);
+
+      // Update the last message with the AI response in real-time
+      messages.value[messages.value.length - 1] = { ...aiMessage }; // Create a new object reference
+    }
+
+    // Log the raw AI message content
+    console.log("Raw AI message content:", aiMessage.content);
+
+    // New code to display the message in the desired format
+    const parsedMessage = JSON.parse(aiMessage.content);
+    aiMessage.content = parsedMessage.data;
+
+    // Update the last message with the AI response
+    messages.value[messages.value.length - 1] = { ...aiMessage }; // Create a new object reference
+
+    // Update the status to complete after setting content
+    aiMessage.status = "complete";
+
+    // Log the updated AI message content
+    console.log("Updated AI message content:", aiMessage.content);
+  } catch (error) {
+    aiMessage.content = "⚠️ Layanan AI tidak tersedia";
+    aiMessage.status = "error";
+    messages.value[messages.value.length - 1] = { ...aiMessage }; // Create a new object reference
+  }
 };
 </script>

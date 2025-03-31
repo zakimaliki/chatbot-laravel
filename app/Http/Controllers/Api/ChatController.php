@@ -6,6 +6,7 @@ use App\Http\Controllers\Controller;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Http;
 use Throwable;
+use App\Models\ChatHistory;
 
 class ChatController extends Controller
 {
@@ -85,6 +86,14 @@ class ChatController extends Controller
                         ob_flush();
                     }
                     flush();
+
+                    $user = auth()->user(); 
+                    ChatHistory::create([
+                        'user_id' => $user->id,
+                        'user_message' => $request->input('message'),
+                        'ai_response' => $fullResponse,
+                    ]);
+
                     break; // Break out of the retry loop after successful processing
                 }
             }, 200, [
@@ -98,5 +107,14 @@ class ChatController extends Controller
             }
             return "An error occurred while processing your request. Please try again later.";
         }
+    }
+
+    public function history()
+    {
+
+        $user = auth()->user();
+        $history = ChatHistory::where('user_id', $user->id)->latest()->get();
+
+        return response()->json($history);
     }
 }

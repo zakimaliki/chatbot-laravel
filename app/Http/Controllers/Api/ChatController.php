@@ -7,6 +7,7 @@ use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Http;
 use Throwable;
 use App\Models\ChatHistory;
+use Carbon\Carbon;
 
 class ChatController extends Controller
 {
@@ -111,9 +112,15 @@ class ChatController extends Controller
 
     public function history()
     {
-
         $user = auth()->user();
-        $history = ChatHistory::where('user_id', $user->id)->latest()->get();
+
+        if (!$user) {
+            return response()->json(['error' => 'Unauthorized'], 401);
+        }
+
+        $history = ChatHistory::where('user_id', $user->id)
+            ->latest()
+            ->get(['user_message', 'ai_response', 'created_at']);
 
         return response()->json($history);
     }

@@ -21,6 +21,7 @@
             <span v-if="message.status === 'thinking'" class="text-gray-500"
               >...loading</span
             >
+            <div class="text-gray-500 text-xs">{{ message.created_at }}</div>
           </div>
         </div>
       </div>
@@ -47,10 +48,60 @@
 </template>
 
 <script setup>
-import { ref } from "vue";
+import { ref, onMounted } from "vue";
 
 const input = ref("");
 const messages = ref([]);
+
+// Fungsi untuk mengambil riwayat chat
+const fetchChatHistory = async () => {
+  try {
+    const response = await fetch("/api/history", {
+      method: "GET",
+      headers: {
+        "Content-Type": "application/json",
+        Authorization: "Bearer " + localStorage.getItem("token"),
+      },
+    });
+
+    if (response.ok) {
+      const history = await response.json();
+      // Menambahkan riwayat chat ke messages
+      const formattedMessages = history.map((item) => ({
+        user: {
+          role: "user",
+          content: item.user_message,
+          status: "complete",
+          created_at: new Date(item.created_at)
+            .toISOString()
+            .replace("T", " ")
+            .split(".")[0], // Format to YYYY-MM-DD HH:mm:ss
+        },
+        assistant: {
+          role: "assistant",
+          content: item.ai_response,
+          status: "complete",
+          created_at: new Date(item.created_at)
+            .toISOString()
+            .replace("T", " ")
+            .split(".")[0], // Format to YYYY-MM-DD HH:mm:ss
+        },
+      }));
+
+      // Flatten and sort messages by created_at
+      messages.value = formattedMessages
+        .flatMap((msg) => [msg.user, msg.assistant])
+        .sort((a, b) => new Date(a.created_at) - new Date(b.created_at));
+    }
+  } catch (error) {
+    console.error("Error fetching chat history:", error);
+  }
+};
+
+// Panggil fetchChatHistory saat komponen dimuat
+onMounted(() => {
+  fetchChatHistory();
+});
 
 const sendMessage = async () => {
   if (!input.value.trim()) return;
@@ -60,6 +111,7 @@ const sendMessage = async () => {
     role: "user",
     content: input.value,
     status: "complete",
+    created_at: new Date().toISOString().replace("T", " ").split(".")[0],
   };
   messages.value.push(userMessage);
 
@@ -106,6 +158,12 @@ const sendMessage = async () => {
 
     // Update the status to complete after setting content
     aiMessage.status = "complete";
+
+    // Update the created_at for the last message
+    messages.value[messages.value.length - 1].created_at = new Date()
+      .toISOString()
+      .replace("T", " ")
+      .split(".")[0];
 
     // Log the updated AI message content
     console.log("Updated AI message content:", aiMessage.content);

@@ -67,7 +67,7 @@ const login = async () => {
     const data = await response.json();
     if (response.ok) {
       localStorage.setItem("token", data.token); // Menyimpan token di localStorage
-      router.push("/");
+      window.location.href = "/";
     } else {
       alert(data.error || "Login failed");
     }

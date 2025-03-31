@@ -6,13 +6,34 @@ import ChatApp from "./components/ChatApp.vue";
 import Login from "./components/Login.vue";
 import Register from "./components/Register.vue";
 
+const isAuthenticated = localStorage.getItem('token') !== null; // Ganti dengan logika autentikasi yang sesuai
 // Membuat router
 const router = createRouter({
     history: createWebHistory(),
     routes: [
-        { path: '/', component: ChatApp },
-        { path: '/login', component: Login },
-        { path: '/register', component: Register },
+        {
+            path: "/",
+            component: ChatApp,
+            beforeEnter: (to, from, next) => {
+                if (!isAuthenticated) {
+                    next('/login'); // Redirect ke halaman login jika belum login
+                } else {
+                    next(); // Lanjutkan ke rute yang diminta
+                }
+            }
+        },
+        {
+            path: "/login",
+            component: Login,
+            beforeEnter: (to, from, next) => {
+                if (isAuthenticated) {
+                    next("/"); // Redirect ke halaman utama jika sudah login
+                } else {
+                    next(); // Lanjutkan ke halaman login jika belum login
+                }
+            },
+        },
+        { path: "/register", component: Register },
     ],
 });
 

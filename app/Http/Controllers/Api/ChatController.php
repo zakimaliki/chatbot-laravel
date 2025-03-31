@@ -3,10 +3,8 @@
 namespace App\Http\Controllers\Api;
 
 use App\Http\Controllers\Controller;
-use App\Models\ChatHistory;  // Import model ChatHistory
 use Illuminate\Http\Request;
-use GuzzleHttp\Client;
-use Illuminate\Support\Facades\Auth;
+use Illuminate\Support\Facades\Http;
 use Throwable;
 
 class ChatController extends Controller
@@ -18,14 +16,8 @@ class ChatController extends Controller
     public function chat(Request $request)
     {
         try {
-            // Pastikan pengguna terautentikasi
-            $user = Auth::user();
-            if (!$user) {
-                return response()->json(['error' => 'Unauthorized'], 401);
-            }
-
-            return response()->stream(function () use ($request, $user) {
-                $client = new Client([
+            return response()->stream(function () use ($request) {
+                $client = new \GuzzleHttp\Client([
                     'http_errors' => false // Prevent Guzzle from throwing exceptions for HTTP errors
                 ]);
                 
@@ -39,10 +31,11 @@ class ChatController extends Controller
                             'Content-Type' => 'application/json',
                         ],
                         'json' => [
-                            'model' => 'gpt-4',  // Gunakan model GPT-4
+                            'model' => 'gpt-4o-mini',  
                             'messages' => [
                                 ['role' => 'user', 'content' => $request->input('message')]
                             ],
+                            'store' => true,
                             'stream' => true
                         ],
                         'stream' => true
@@ -92,14 +85,6 @@ class ChatController extends Controller
                         ob_flush();
                     }
                     flush();
-
-                    // Menyimpan percakapan ke database
-                    ChatHistory::create([
-                        'user_id' => $user->id,
-                        'user_message' => $request->input('message'),
-                        'ai_response' => $fullResponse,
-                    ]);
-
                     break; // Break out of the retry loop after successful processing
                 }
             }, 200, [
@@ -113,21 +98,5 @@ class ChatController extends Controller
             }
             return "An error occurred while processing your request. Please try again later.";
         }
-    }
-
-    /**
-     * Mengambil histori chat pengguna
-     */
-    public function history()
-    {
-        $user = Auth::user();
-        if (!$user) {
-            return response()->json(['error' => 'Unauthorized'], 401);
-        }
-
-        // Mengambil histori percakapan pengguna
-        $history = ChatHistory::where('user_id', $user->id)->latest()->get();
-
-        return response()->json($history);
     }
 }

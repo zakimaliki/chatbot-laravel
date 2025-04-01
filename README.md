@@ -73,7 +73,7 @@ php artisan serve
 
 Access the application at http://localhost:8000.
 
-⸻
+---
 
 ## ⚙️ Configuration
 
@@ -84,9 +84,7 @@ If the chatbot uses OpenAI, add your API key in .env:
 OPENAI_API_KEY=your_api_key_here (register and get from https://platform.openai.com/api-keys)
 JWT_SECRET=jwt_api_key (make it up to you)
 
-
-
-⸻
+---
 
 ## 🛠️ API Endpoints
 
@@ -97,7 +95,7 @@ POST	/api/auth/login	Authenticate user
 
 Use Authorization: Bearer <token> for protected routes.
 
-⸻
+---
 
 ## 🧪 Running Tests
 
@@ -109,9 +107,7 @@ Or with coverage:
 
 vendor/bin/phpunit --coverage-html=coverage
 
-
-
-⸻
+---
 
 ## 🤝 Contributing
 	1.	Fork the repository.
@@ -120,10 +116,11 @@ vendor/bin/phpunit --coverage-html=coverage
 	4.	Push to the branch (git push origin feature-branch).
 	5.	Create a Pull Request.
 
-⸻
+---
 
 ## 📜 License
 
 This project is licensed under the MIT License.
 
-⸻
+---
+

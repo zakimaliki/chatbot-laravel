@@ -9,8 +9,10 @@
 
     <!-- Chat Container -->
     <div class="flex-1 max-w-4xl w-full mx-auto p-4">
-      <!-- Chat messages will go here -->
-      <div class="bg-white rounded-lg shadow-sm min-h-[400px] mb-4 p-4">
+      <!-- Chat messages -->
+      <div
+        class="bg-white rounded-lg shadow-sm min-h-[400px] mb-4 p-4 overflow-y-auto"
+      >
         <div
           v-for="(message, index) in messages"
           :key="index"
@@ -24,7 +26,6 @@
             "
           >
             <span>{{ message.content }}</span>
-            <!-- Show loading indicator if AI is thinking -->
             <span v-if="message.status === 'thinking'" class="text-gray-500"
               >...loading</span
             >
@@ -73,32 +74,21 @@ const fetchChatHistory = async () => {
 
     if (response.ok) {
       const history = await response.json();
-      // Menambahkan riwayat chat ke messages
-      const formattedMessages = history.map((item) => ({
-        user: {
+      const formattedMessages = history.flatMap((item) => [
+        {
           role: "user",
           content: item.user_message,
           status: "complete",
-          created_at: new Date(item.created_at)
-            .toISOString()
-            .replace("T", " ")
-            .split(".")[0], // Format to YYYY-MM-DD HH:mm:ss
+          created_at: new Date(item.created_at).toLocaleDateString(),
         },
-        assistant: {
+        {
           role: "assistant",
           content: item.ai_response,
           status: "complete",
-          created_at: new Date(item.created_at)
-            .toISOString()
-            .replace("T", " ")
-            .split(".")[0], // Format to YYYY-MM-DD HH:mm:ss
+          created_at: new Date(item.created_at).toLocaleDateString(),
         },
-      }));
-
-      // Flatten and sort messages by created_at
-      messages.value = formattedMessages
-        .flatMap((msg) => [msg.user, msg.assistant])
-        .sort((a, b) => new Date(a.created_at) - new Date(b.created_at));
+      ]);
+      messages.value = formattedMessages;
     }
   } catch (error) {
     console.error("Error fetching chat history:", error);
@@ -110,26 +100,31 @@ onMounted(() => {
   fetchChatHistory();
 });
 
+// Fungsi untuk mengirim pesan ke AI
 const sendMessage = async () => {
   if (!input.value.trim()) return;
 
-  // Kirim pesan pengguna
+  // Tambahkan pesan pengguna ke tampilan
   const userMessage = {
     role: "user",
     content: input.value,
     status: "complete",
-    created_at: new Date().toISOString().replace("T", " ").split(".")[0],
+    created_at: new Date().toLocaleDateString(),
   };
   messages.value.push(userMessage);
 
-  // Menambahkan placeholder AI
-  const aiMessage = { role: "assistant", content: "", status: "thinking" };
+  // Tambahkan placeholder untuk respons AI
+  const aiMessage = {
+    role: "assistant",
+    content: "",
+    status: "thinking",
+    created_at: "",
+  };
   messages.value.push(aiMessage);
 
   input.value = "";
 
   try {
-    // Mengirim request ke API Laravel
     const response = await fetch("/api/chat", {
       method: "POST",
       headers: {
@@ -139,45 +134,50 @@ const sendMessage = async () => {
       body: JSON.stringify({ message: userMessage.content }),
     });
 
-    aiMessage.status = "generating";
+    // Mendukung streaming data
     const reader = response.body.getReader();
     const decoder = new TextDecoder();
+    let partialMessage = "";
 
-    // Streaming data dari OpenAI
     while (true) {
       const { done, value } = await reader.read();
       if (done) break;
-      aiMessage.content += decoder.decode(value);
+      const textChunk = decoder.decode(value, { stream: true });
 
-      // Update the last message with the AI response in real-time
-      messages.value[messages.value.length - 1] = { ...aiMessage }; // Create a new object reference
+      // Pastikan hanya membaca konten yang diperlukan
+      const lines = textChunk
+        .split("\n")
+        .map((line) => line.trim())
+        .filter((line) => line.startsWith("data:"));
+
+      for (const line of lines) {
+        const jsonData = line.substring(6); // Hapus "data: " di awal
+
+        if (jsonData === "[DONE]") break;
+
+        try {
+          const parsedData = JSON.parse(jsonData);
+          const newText = parsedData.data || "";
+          partialMessage += newText;
+
+          // Update tampilan secara real-time
+          aiMessage.content = partialMessage;
+          aiMessage.created_at = new Date().toLocaleDateString();
+          messages.value[messages.value.length - 1] = { ...aiMessage };
+        } catch (error) {
+          console.error("Error parsing JSON:", error);
+        }
+      }
     }
 
-    // Log the raw AI message content
-    console.log("Raw AI message content:", aiMessage.content);
-
-    // New code to display the message in the desired format
-    const parsedMessage = JSON.parse(aiMessage.content);
-    aiMessage.content = parsedMessage.data;
-
-    // Update the last message with the AI response
-    messages.value[messages.value.length - 1] = { ...aiMessage }; // Create a new object reference
-
-    // Update the status to complete after setting content
+    // Tandai respons AI sebagai selesai
     aiMessage.status = "complete";
-
-    // Update the created_at for the last message
-    messages.value[messages.value.length - 1].created_at = new Date()
-      .toISOString()
-      .replace("T", " ")
-      .split(".")[0];
-
-    // Log the updated AI message content
-    console.log("Updated AI message content:", aiMessage.content);
+    aiMessage.created_at = new Date().toLocaleDateString();
+    messages.value[messages.value.length - 1] = { ...aiMessage };
   } catch (error) {
     aiMessage.content = "⚠️ Layanan AI tidak tersedia";
     aiMessage.status = "error";
-    messages.value[messages.value.length - 1] = { ...aiMessage }; // Create a new object reference
+    messages.value[messages.value.length - 1] = { ...aiMessage };
   }
 };
 </script>

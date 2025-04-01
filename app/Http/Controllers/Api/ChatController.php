@@ -4,10 +4,9 @@ namespace App\Http\Controllers\Api;
 
 use App\Http\Controllers\Controller;
 use Illuminate\Http\Request;
-use Illuminate\Support\Facades\Http;
+use GuzzleHttp\Client;
 use Throwable;
 use App\Models\ChatHistory;
-use Carbon\Carbon;
 
 class ChatController extends Controller
 {
@@ -19,13 +18,13 @@ class ChatController extends Controller
     {
         try {
             return response()->stream(function () use ($request) {
-                $client = new \GuzzleHttp\Client([
-                    'http_errors' => false // Prevent Guzzle from throwing exceptions for HTTP errors
+                $client = new Client([
+                    'http_errors' => false, // Prevent Guzzle from throwing exceptions for HTTP errors
                 ]);
-                
+
                 $maxRetries = 3;
                 $attempt = 0;
-                
+
                 while ($attempt < $maxRetries) {
                     $response = $client->post('https://api.openai.com/v1/chat/completions', [
                         'headers' => [
@@ -33,11 +32,10 @@ class ChatController extends Controller
                             'Content-Type' => 'application/json',
                         ],
                         'json' => [
-                            'model' => 'gpt-4o-mini',  
+                            'model' => 'gpt-4o-mini',
                             'messages' => [
                                 ['role' => 'user', 'content' => $request->input('message')]
                             ],
-                            'store' => true,
                             'stream' => true
                         ],
                         'stream' => true
@@ -49,53 +47,49 @@ class ChatController extends Controller
                             sleep(2 * $attempt); // Exponential backoff
                             continue;
                         }
-                        echo "Rate limit reached. Please try again in a few moments.";
+                        echo "data: " . json_encode(['error' => "Rate limit reached. Please try again later."]) . "\n\n";
+                        ob_flush();
+                        flush();
                         return;
                     }
 
-                    // Process successful response
-                    $body = $response->getBody();
-                    
-                    $fullResponse = ''; // Variabel untuk menyimpan respons lengkap
+                    // Memproses response streaming
+                    $body = $response->getBody()->detach(); // Convert Guzzle stream to resource
+                    $fullResponse = ''; // Menyimpan respons lengkap
 
-                    while (!$body->eof()) {
-                        $line = trim($body->read(1024));
-                        
+                    while (!feof($body)) {
+                        $line = trim(fgets($body)); // Membaca per baris
+
                         if (empty($line)) continue;
-                        
-                        $lines = explode("\n", $line);
-                        foreach ($lines as $line) {
-                            if (str_starts_with($line, 'data: ')) {
-                                $data = substr($line, 6);                       
-                                
-                                if ($data === "[DONE]") break 2;
-                                
-                                if ($data) {
-                                    $json = json_decode($data, true);
-                                    $content = $json['choices'][0]['delta']['content'] ?? '';
-                                    if (!empty($content)) {
-                                        $fullResponse .= $content; // Mengumpulkan semua konten
-                                    }
-                                }
+
+                        if (str_starts_with($line, 'data: ')) {
+                            $data = substr($line, 6);                       
+                            
+                            if ($data === "[DONE]") break;
+
+                            $json = json_decode($data, true);
+                            $content = $json['choices'][0]['delta']['content'] ?? '';
+
+                            if (!empty($content)) {
+                                $fullResponse .= $content; 
+                                echo "data: " . json_encode(['data' => $content]) . "\n\n";
+                                ob_flush();
+                                flush();
                             }
                         }
                     }
-                    
-                    // Mengirimkan respons lengkap sebagai JSON
-                    echo json_encode(['data' => $fullResponse]) . "\n";
-                    if (ob_get_level() > 0) {
-                        ob_flush();
+
+                    // Simpan ke database
+                    $user = auth()->user();
+                    if ($user) {
+                        ChatHistory::create([
+                            'user_id' => $user->id,
+                            'user_message' => $request->input('message'),
+                            'ai_response' => $fullResponse,
+                        ]);
                     }
-                    flush();
 
-                    $user = auth()->user(); 
-                    ChatHistory::create([
-                        'user_id' => $user->id,
-                        'user_message' => $request->input('message'),
-                        'ai_response' => $fullResponse,
-                    ]);
-
-                    break; // Break out of the retry loop after successful processing
+                    break; // Keluar dari loop retry jika sukses
                 }
             }, 200, [
                 'Content-Type' => 'text/event-stream',
@@ -103,10 +97,9 @@ class ChatController extends Controller
                 'X-Accel-Buffering' => 'no'
             ]);
         } catch (Throwable $e) {
-            if (str_contains($e->getMessage(), '429')) {
-                return "Rate limit reached. Please try again in a few moments.";
-            }
-            return "An error occurred while processing your request. Please try again later.";
+            echo "data: " . json_encode(['error' => "An error occurred while processing your request. Please try again later."]) . "\n\n";
+            ob_flush();
+            flush();
         }
     }
 

@@ -1,4 +1,3 @@
-tolong perbaiki readme saya :
 # Chatbot Laravel
 
 Chatbot Laravel is an AI-powered chatbot built with Laravel. This project provides an interactive interface where users can communicate with the chatbot and receive automated responses.
@@ -41,33 +40,32 @@ Before installing, ensure your system has:
 
 Follow these steps to set up the project:
 
-### 1️⃣ Clone the Repository
-```bash
+1️⃣ Clone the Repository
 git clone https://github.com/zakimaliki/chatbot-laravel.git
 cd chatbot-laravel
 
-### 2️⃣ Install Dependencies
+2️⃣ Install Dependencies
 
 composer install
 npm install
 
-### 3️⃣ Configure Environment
+3️⃣ Configure Environment
 	•	Copy the .env.example file and rename it to .env
 	•	Update database credentials, mail settings, and AI API keys (if required).
 
-### 4️⃣ Generate Application Key
+4️⃣ Generate Application Key
 
 php artisan key:generate
 
-### 5️⃣ Run Database Migrations
+5️⃣ Run Database Migrations
 
 php artisan migrate --seed
 
-### 6️⃣ Build Frontend Assets
+6️⃣ Build Frontend Assets
 
 npm run build
 
-### 7️⃣ Start Development Server
+7️⃣ Start Development Server
 
 php artisan serve
 
@@ -75,14 +73,12 @@ Access the application at http://localhost:8000.
 
 ---
 
-## ⚙️ Configuration
-
-### 🔑 API Keys
+## 🔑 API Keys
 
 If the chatbot uses OpenAI, add your API key in .env:
 
-OPENAI_API_KEY=your_api_key_here (register and get from https://platform.openai.com/api-keys)
-JWT_SECRET=jwt_api_key (make it up to you)
+OPENAI_API_KEY=your_api_key_here
+JWT_SECRET=your_jwt_here
 
 ---
 
@@ -95,7 +91,7 @@ POST	/api/auth/login	Authenticate user
 
 Use Authorization: Bearer <token> for protected routes.
 
----
+⸻
 
 ## 🧪 Running Tests
 
@@ -106,6 +102,8 @@ php artisan test
 Or with coverage:
 
 vendor/bin/phpunit --coverage-html=coverage
+
+
 
 ---
 
@@ -123,4 +121,3 @@ vendor/bin/phpunit --coverage-html=coverage
 This project is licensed under the MIT License.
 
 ---
-

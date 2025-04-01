@@ -46,28 +46,28 @@ Follow these steps to set up the project:
 git clone https://github.com/zakimaliki/chatbot-laravel.git
 cd chatbot-laravel
 
-2️⃣ Install Dependencies
+### 2️⃣ Install Dependencies
 
 composer install
 npm install
 
-3️⃣ Configure Environment
+### 3️⃣ Configure Environment
 	•	Copy the .env.example file and rename it to .env
 	•	Update database credentials, mail settings, and AI API keys (if required).
 
-4️⃣ Generate Application Key
+### 4️⃣ Generate Application Key
 
 php artisan key:generate
 
-5️⃣ Run Database Migrations
+### 5️⃣ Run Database Migrations
 
 php artisan migrate --seed
 
-6️⃣ Build Frontend Assets
+### 6️⃣ Build Frontend Assets
 
 npm run build
 
-7️⃣ Start Development Server
+### 7️⃣ Start Development Server
 
 php artisan serve
 
@@ -75,9 +75,9 @@ Access the application at http://localhost:8000.
 
 ⸻
 
-⚙️ Configuration
+## ⚙️ Configuration
 
-🔑 API Keys
+### 🔑 API Keys
 
 If the chatbot uses OpenAI, add your API key in .env:
 
@@ -88,7 +88,7 @@ JWT_SECRET=jwt_api_key (make it up to you)
 
 ⸻
 
-🛠️ API Endpoints
+## 🛠️ API Endpoints
 
 Method	Endpoint	Description
 GET	/api/chat	Fetch chat history
@@ -99,7 +99,7 @@ Use Authorization: Bearer <token> for protected routes.
 
 ⸻
 
-🧪 Running Tests
+## 🧪 Running Tests
 
 To run tests:
 
@@ -113,7 +113,7 @@ vendor/bin/phpunit --coverage-html=coverage
 
 ⸻
 
-🤝 Contributing
+## 🤝 Contributing
 	1.	Fork the repository.
 	2.	Create a feature branch (git checkout -b feature-branch).
 	3.	Commit your changes (git commit -m "Added new feature").
@@ -122,7 +122,7 @@ vendor/bin/phpunit --coverage-html=coverage
 
 ⸻
 
-📜 License
+## 📜 License
 
 This project is licensed under the MIT License.
 
